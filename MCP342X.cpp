@@ -69,8 +69,8 @@ MCP342X::MCP342X(uint8_t address) {
  * @return True if connection is valid, false otherwise
  */
 bool MCP342X::testConnection() {
-    Wire.beginTransmission(devAddr);
-    return (Wire.endTransmission() == 0);
+	i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+    return i2c_m_sync_disable(&I2C_0);
 }
 
 
@@ -101,9 +101,9 @@ uint8_t MCP342X::getConfigRegShdw(void) {
  *   the shadow configuration register
  */
 bool MCP342X::startConversion(void) {
-  Wire.beginTransmission(devAddr);
-  Wire.write(configRegShdw | MCP342X_RDY);
-  return (Wire.endTransmission() == 0);
+  i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+  uint8_t data = configRegShdw | MCP342X_RDY;
+  return io_write(i2c_0, &data, 1);
 }
 
  
@@ -113,11 +113,10 @@ bool MCP342X::startConversion(void) {
  *   supplied channel
  */
 bool MCP342X::startConversion(uint8_t channel) {
-  Wire.beginTransmission(devAddr);
-  configRegShdw = ((configRegShdw & ~MCP342X_CHANNEL_MASK) | 
-			   (channel & MCP342X_CHANNEL_MASK));
-  Wire.write(configRegShdw | MCP342X_RDY);
-  return (Wire.endTransmission() == 0);
+  configRegShdw = ((configRegShdw & ~MCP342X_CHANNEL_MASK) | (channel & MCP342X_CHANNEL_MASK));
+  i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+  uint8_t data = configRegShdw | MCP342X_RDY;
+  return io_write(i2c_0, &data, 1);
 }
 
  
@@ -134,15 +133,24 @@ uint8_t MCP342X::getResult(int16_t *dataPtr) {
     return 0xFF;
   }
 
-  do {
-     if(Wire.requestFrom(devAddr, (uint8_t) 3) == 3) {
-       ((char*)dataPtr)[1] = Wire.read();
-       ((char*)dataPtr)[0] = Wire.read();
-       adcStatus = Wire.read();
-     }
-     else return 0xFF;
-  } while((adcStatus & MCP342X_RDY) != 0x00);
-  return adcStatus;
+//   do {
+//      if(Wire.requestFrom(devAddr, (uint8_t) 3) == 3) {
+//        ((char*)dataPtr)[1] = Wire.read();
+//        ((char*)dataPtr)[0] = Wire.read();
+//        adcStatus = Wire.read();
+//      }
+//      else return 0xFF;
+//   } while((adcStatus & MCP342X_RDY) != 0x00);
+    
+  i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+  
+  uint8_t data[2];
+  uint8_t reply = io_read(i2c_0, data, 2);
+  
+  ((char*)dataPtr)[0] = data[0];
+  ((char*)dataPtr)[1] = data[1];
+
+  return reply;
 }
 
  
@@ -159,14 +167,22 @@ uint8_t MCP342X::checkforResult(int16_t *dataPtr) {
     return 0xFF;
   }
 
-  if(Wire.requestFrom(devAddr, (uint8_t) 3) == 3) {
-    ((char*)dataPtr)[1] = Wire.read();
-    ((char*)dataPtr)[0] = Wire.read();
-    adcStatus = Wire.read();
-  }
-  else return 0xFF;
+//   if(Wire.requestFrom(devAddr, (uint8_t) 3) == 3) {
+//     ((char*)dataPtr)[1] = Wire.read();
+//     ((char*)dataPtr)[0] = Wire.read();
+//     adcStatus = Wire.read();
+//   }
+//   else return 0xFF;
+  
+  i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+  
+  uint8_t data[2];
+  uint8_t reply = io_read(i2c_0, data, 2);
+  
+  ((char*)dataPtr)[0] = data[0];
+  ((char*)dataPtr)[1] = data[1];
 
-  return adcStatus;
+  return reply;
 }
 
  
@@ -184,17 +200,32 @@ uint8_t MCP342X::getResult(int32_t *dataPtr) {
     return 0xFF;
   }
 
-  do {
-     if(Wire.requestFrom((uint8_t) devAddr, (uint8_t) 4) == 4) {
-       ((char*)dataPtr)[3] = Wire.read();
-       ((char*)dataPtr)[2] = Wire.read();
-       ((char*)dataPtr)[1] = Wire.read();
-       adcStatus = Wire.read();
-     }
-     else return 0xFF;
-  } while((adcStatus & MCP342X_RDY) != 0x00);
-  *dataPtr = (*dataPtr)>>8;
-  return adcStatus;
+//   do {
+//      if(Wire.requestFrom((uint8_t) devAddr, (uint8_t) 4) == 4) {
+//        ((char*)dataPtr)[3] = Wire.read();
+//        ((char*)dataPtr)[2] = Wire.read();
+//        ((char*)dataPtr)[1] = Wire.read();
+//        adcStatus = Wire.read();
+//      }
+//      else return 0xFF;
+//   } while((adcStatus & MCP342X_RDY) != 0x00);
+//   
+// 	*dataPtr = (*dataPtr)>>8;
+//   
+// 	return adcStatus;
+  
+	i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+  
+	uint8_t data[3];
+	uint8_t reply = io_read(i2c_0, data, 3);
+	
+	((char*)dataPtr)[1] = data[1];
+	((char*)dataPtr)[2] = data[2];
+	((char*)dataPtr)[3] = data[3];
+	
+	*dataPtr = (*dataPtr)>>8;
+
+	return reply;
 }
 
 
@@ -212,16 +243,29 @@ uint8_t MCP342X::checkforResult(int32_t *dataPtr) {
     return 0xFF;
   }
 
-  if(Wire.requestFrom((uint8_t) devAddr, (uint8_t) 4) == 4) {
-    ((char*)dataPtr)[3] = Wire.read();
-    ((char*)dataPtr)[2] = Wire.read();
-    ((char*)dataPtr)[1] = Wire.read();
-    adcStatus = Wire.read();
-  }
-  else return 0xFF;
+//   if(Wire.requestFrom((uint8_t) devAddr, (uint8_t) 4) == 4) {
+//     ((char*)dataPtr)[3] = Wire.read();
+//     ((char*)dataPtr)[2] = Wire.read();
+//     ((char*)dataPtr)[1] = Wire.read();
+//     adcStatus = Wire.read();
+//   }
+//   else return 0xFF;
+// 
+//   *dataPtr = (*dataPtr)>>8;
+//   return adcStatus;
+	
+	i2c_m_sync_set_slaveaddr(&I2C_0, devAddr, I2C_M_SEVEN);
+	
+	uint8_t data[3];
+	uint8_t reply = io_read(i2c_0, data, 3);
+	
+	((char*)dataPtr)[1] = data[1];
+	((char*)dataPtr)[2] = data[2];
+	((char*)dataPtr)[3] = data[3];
+	
+	*dataPtr = (*dataPtr)>>8;
 
-  *dataPtr = (*dataPtr)>>8;
-  return adcStatus;
+	return reply;
 }
 
 

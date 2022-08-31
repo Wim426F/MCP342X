@@ -33,10 +33,9 @@
         #include "Arduino.h"
     #endif
 #else
-    #include "ArduinoWrapper.h"
+    #include <atmel_start.h>
 #endif
 
-#include <Wire.h>
 
 // I2C Address of device
 // MCP3421, MCP3425 & MCP3426 are factory programed for any of 0x68 thru 0x6F
